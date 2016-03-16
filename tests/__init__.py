@@ -109,7 +109,7 @@ class TestCase(object):
                 pass
         self.create_tables()
 
-        Session = sessionmaker(bind=self.connection)
+        Session = sessionmaker(bind=self.engine)
         self.session = Session(autoflush=False)
         if driver == 'postgres-native':
             self.session.execute('CREATE EXTENSION IF NOT EXISTS hstore')
