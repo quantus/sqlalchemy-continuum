@@ -128,8 +128,6 @@ class VersioningManager(object):
         self.session_listeners = {
             'before_flush': self.before_flush,
             'after_flush': self.after_flush,
-            'after_commit': self.clear,
-            'after_rollback': self.clear,
         }
         self.mapper_listeners = {
             'after_delete': self.track_deletes,
@@ -309,6 +307,19 @@ class VersioningManager(object):
         if conn in self.units_of_work:
             return self.units_of_work[conn]
         else:
+            sa.event.listen(
+                session,
+                'after_commit',
+                lambda session: self.clear(session, conn),
+                once=True
+            )
+            sa.event.listen(
+                session,
+                'after_rollback',
+                lambda session: self.clear(session, conn),
+                once=True
+            )
+
             uow = self.uow_class(self)
             self.units_of_work[conn] = uow
             return uow
@@ -341,18 +352,19 @@ class VersioningManager(object):
         uow = self.unit_of_work(session)
         uow.process_after_flush(session)
 
-    def clear(self, session):
+    def clear(self, session, conn):
         """
-        Simple SQLAlchemy listener that is being invoked after succesful
+        Simple listener that is being invoked after succesful
         transaction commit or when transaction rollback occurs. The purpose of
         this listener is to reset this UnitOfWork back to its initialization
         state.
 
         :param session: SQLAlchemy session object
+        :param conn: SQLAlchemy connection object
         """
         if session.transaction.nested:
             return
-        conn = session.bind
+
         if conn in self.units_of_work:
             uow = self.units_of_work[conn]
             uow.reset(session)
