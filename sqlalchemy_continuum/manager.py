@@ -307,10 +307,7 @@ class VersioningManager(object):
         :param session: SQLAlchemy session object
         """
         conn = session.connection()
-        if (
-            session not in self.session_connection_map and
-            conn not in self.session_connection_map.values()
-        ):
+        if conn not in self.session_connection_map.values():
             self.session_connection_map[session] = conn
 
         if conn in self.units_of_work:
